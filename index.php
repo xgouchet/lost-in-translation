@@ -49,14 +49,29 @@
                         </form>
                 </div>
                 
-                <div>
-                        <!-- The deezer Player -->
-                        <div id="lit-player" style="display:none">
-                        </div>
+                <table>
+                    <tr>
+                        <td>
+                            <div id="lit-information" style="display:none">
+                            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+                            </div>
+                        </td>
+                        <td >
+                            <!-- the current artist biography -->
+                            <div id="lit-biography" style="display:none">
+                                <h3 id="lit-biography-name"></h3>
+                                <p id="lit-biography-content"></p>
+                                <span id="lit-biography-source"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <!-- The deezer Player -->
+                            <div id="lit-player" style="display:none">
+                            </div>
+                        </td>
+                    </tr>
+                </table>
 
-                        <div id="lit-information" style="display:none">
-                                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-                        </div>
                 </div>
 
                 <div style="clear : both"></div>
@@ -405,6 +420,7 @@
                         echonestArtists.forEach(function (echonestArtist) {
                                 var artist = {}; 
                                 artist.deezerId = extractDeezerId(echonestArtist); 
+                                artist.biography = extractBiographies(echonestArtist);
                                 artist.genres = extractGenres(echonestArtist);
                                 artist.name = echonestArtist.name; 
 
@@ -457,6 +473,17 @@
                                 genres.push(echonestGenre.name);
                         });
                         return genres; 
+                }
+
+                /*
+                * Extract the Genres from an artist's echonest object
+                */
+                function extractBiographies(echonestArtist){
+                        if (echonestArtist.biographies.length > 0) {
+                            return echonestArtist.biographies[0];
+                        } else {
+                            return null; 
+                        }
                 }
 
 
@@ -516,6 +543,56 @@
                                                 });
                 }
 
+                /*
+                 * Updates the current artist's Bio
+                 */
+                function updateArtistBio(artistId){
+                    var bioDisplayed = false; 
+                    currentLocationArtists.forEach(function (artist){
+                        if (artist.deezerId == artistId) {
+                            if (artist.biography != null) {
+                                displayBiography(artist);
+                                bioDisplayed = true; 
+                            } 
+                        }
+                    });
+
+                    if (!bioDisplayed){
+                        document.getElementById('lit-biography').setAttribute("style", "display:none;");
+                    }
+                }
+
+                /*
+                 * Displays a biography
+                 */
+                function displayBiography(artist) {
+                        debug(artist);
+
+                        // Artist name
+                        parentElement = document.getElementById("lit-biography-name");
+                        var artistLinkElement = document.createElement('A');
+                        artistLinkElement.href = "http://www.deezer.com/artist/" + artist.deezerId;
+                        artistLinkElement.innerHTML = artist.name;
+                        clearContents(parentElement);
+                        parentElement.appendChild(artistLinkElement);
+
+                        // biography
+                        parentElement = document.getElementById("lit-biography-content");
+                        parentElement.innerHTML = artist.biography.text;
+
+                        // bio source
+                        parentElement = document.getElementById("lit-biography-source");
+                        var sourceLinkElement = document.createElement('A');
+                        sourceLinkElement.href = artist.biography.url;
+                        sourceLinkElement.innerHTML = artist.biography.site;
+                        clearContents(parentElement);
+                        parentElement.appendChild(sourceLinkElement);
+
+                        // make sure the locations div is not hidden
+                        document.getElementById("lit-biography").removeAttribute("style");
+
+                }
+
                 
 
 
@@ -558,6 +635,12 @@
                                         po_load_playlists();
                                 });
                         }
+
+                        // subscribe to player track events
+                        DZ.Event.subscribe('current_track', function(track, evt_name){
+                            debug(track);
+                            updateArtistBio(track.track.artist.id);
+                        });
 
                         // start the location process ! 
                         getLocation();

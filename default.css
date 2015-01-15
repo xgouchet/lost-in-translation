@@ -33,12 +33,9 @@ h1{
     padding: 8px;
     height: 100%;
     border-radius: 16px;
-    background-color: rgba(255,255,255,0.35);
+    background-color: rgba(255,255,255,0.5);
 }
-#lit-player {
-    float : right;
-    margin-left: 8px;
-}
+
 
 #lit-background-credits {
     padding : 8px;
@@ -55,4 +52,13 @@ h1{
     color: #bdc3c7;
     text-decoration : none;   
     font-weight: bold;
+}
+
+#lit-biography-content {
+    height : 450px;
+    overflow: auto;
+}
+
+td {
+    width : 33%;
 }
