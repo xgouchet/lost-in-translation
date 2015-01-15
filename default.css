@@ -1,0 +1,56 @@
+
+
+body {
+	font-family: sans-serif;
+    margin:0;
+    padding-left: 40px;
+    height: 100%;
+    font-family: Century Gothic, sans-serif;
+}
+
+h1, h2, h3, h4 {
+    font-family: Century Gothic, sans-serif;
+    color: #bdc3c7;
+}
+
+h1{
+    font-size: 2em; 
+}
+
+h1{
+    text-align: center;
+}
+
+#debug {
+        color: #1abc9c;
+}
+#error {
+    color:#e74c3c;
+}
+
+#lit-content {
+    margin:0;
+    padding: 0px;
+    height: 100%;
+}
+
+input[type="button"], a {
+	padding : 4px;
+    margin-top: 10px;
+    background-color: #3995cd;
+    text-align: center;
+    vertical-align: middle;
+    border: none;   
+    font-weight: bold;
+    font-size: 1.1em;
+    font-family: 'Segoe UI' Arial;
+    position: relative;
+    color: #fff;
+    display: inline-block;
+    text-decoration : none; 
+    cursor: pointer; 
+}
+
+dt {
+	font-weight: bold;
+}
