@@ -36,7 +36,12 @@
                                 <a onclick="selectLocation()">OK</a>
                         </form>
                 </div>
+
+                <!-- The deezer Player -->
+                <div id="lit-player">
+                </div>
         </div>
+
 
 
 
@@ -111,7 +116,7 @@
                                         if (httpRequest.status === 200) {
                                                 var responseJSON = JSON.parse(httpRequest.responseText); 
                                                 if (responseJSON.results.length == 0) {
-                                                        error ("Were are you ? No man's land ?");
+                                                       displayFakeLocations("Seems you're in No Man's land. No one has ever done any music here. Try these other locations instead !");
                                                 } else if (responseJSON.results.length == 1 ){
                                                         displayLocation(responseJSON.results[0].formatted_address);
                                                 } else {
@@ -123,7 +128,6 @@
                                                         });
                                                         displayLocations(locations, "We can't pinpoint your location. Can you help us ?");
                                                 }
-                                                // debug(responseJSON);
                                         } else {
                                                 error(httpRequest.statusText);
                                         }
@@ -137,6 +141,9 @@
                  */
                 function displayFakeLocations(message){
                         var fakeLocations = [
+                                "La Loupe, France",
+                                "Chartres, France",
+                                "Nogent le Rotrou, France",
                                 "Orléans, France",
                                 "Groningen, Netherlands",
                                 "Southampton, England, GB",
@@ -155,6 +162,10 @@
 
                         var locationsCombo = document.getElementById("lit-select-locations");
 
+                        // clear previous options
+                        clearContents(locationsCombo);
+
+                        // add one option for each  location
                         locations.forEach(function (location) {
                                 var option = document.createElement("OPTION");
                                 option.setAttribute("value", location);
@@ -163,6 +174,7 @@
                                 locationsCombo.appendChild(option);
                         });
 
+                        // make sure the locations div is not hidden
                         document.getElementById("lit-section-locations").removeAttribute("style");
                 }
 
@@ -230,7 +242,7 @@
                 * Global array of artists 
                 */
                 var currentLocationArtists = new Array();
-                var currentLocationTracks = new Array();
+                var artistsToFetch = new Array();
 
                 /*
                 * Extract the artist from Echonest's response
@@ -242,14 +254,21 @@
                                 artist.deezerId = extractDeezerId(echonestArtist); 
                                 artist.genres = extractGenres(echonestArtist);
                                 artist.name = echonestArtist.name; 
-                                debug(artist);
 
                                 if (artist.deezerId === null) {
                                         debug ("Ignoring " + artist.name + " since we don't have any Deezer ID for him");
                                 } else {
                                         currentLocationArtists.push(artist);
+                                        artistsToFetch.push(artist.deezerId);
                                 }                                
                         });
+
+                        // make sure that we can have some music... 
+                        if (currentLocationArtists.length == 0){
+                                displayFakeLocations("No music was ever written here... You can try these locations instead !");
+                        } else {
+                                findNextTracks();
+                        }
 
                 }
 
@@ -273,7 +292,6 @@
                         }
 
                         // id is now in the form "deezer:artist:12345"
-                        debug(deezerId);
                         return deezerId.substring(14);
                 }
 
@@ -288,13 +306,60 @@
                         return genres; 
                 }
 
-                /*
-                * Creates the track list based on the artists list
-                */
-                function createTrackList() {
-                        currentLocationArtists.forEach(function (artist) {
 
-                        } );
+                var currentLocationTracks = new Array();
+
+                /*
+                 * Clear any previous tracklist
+                 */
+                 function clearTrackList() {
+                        while (currentLocationTracks.length > 0) {
+                                currentLocationTracks.pop();
+                        }
+                 }
+
+                 /*
+                  * Shuffles the tracklist 
+                  */
+                 function shuffleTrackList() {
+                        for (var j, x, i = currentLocationTracks.length; 
+                                i; 
+                                j = Math.floor(Math.random() * i), 
+                                x = currentLocationTracks[--i], 
+                                currentLocationTracks[i] = currentLocationTracks[j], 
+                                currentLocationTracks[j] = x);
+                 }
+
+                /*
+                 * Try to find the next tracks to include in the tracklist
+                 */
+                function findNextTracks(){
+                        if (artistsToFetch.length == 0){
+                                shuffleTrackList();
+                                DZ.player.playTracks(currentLocationTracks);
+                                return; 
+                        }
+
+                        var artist = artistsToFetch.pop()
+                        debug("Fetching tracks for artist " + artist);
+
+                         // request the top tracks for the artist 
+                        DZ.api('/artist/' + artist + '/top', 
+                                                function (response) {
+                                                        debug(response);
+
+                                                        if (response.error) {
+                                                                findNextTracks();
+                                                        } else {
+                                                                response.data.forEach(function (track) {
+                                                                        if (track.readable) {
+                                                                                debug ("Adding track " + track.title + " ("  + track.id + ")");
+                                                                                currentLocationTracks.push(track.id);
+                                                                        }
+                                                                });
+                                                                findNextTracks();
+                                                        }
+                                                });
                 }
 
                 
@@ -310,6 +375,9 @@
                                 appId: '150511',
                                 channelUrl: 'http://www.xgouchet.fr/LostInTranslation/channel.php',
                                 player: { 
+                                        container: 'lit-player',
+                                        width : 800,
+                                        height : 300,
                                         onload : function(){}
                                 }
                         });
@@ -322,8 +390,9 @@
                 DZ.ready(function(sdk_options){
 
                         debug('DZ SDK is ready', sdk_options);
-                        userToken = sdk_options.token.accessToken;
 
+                        // check the user token
+                        userToken = sdk_options.token.accessToken;
                         if (userToken == null){
                                 // ??? 
                         } else {
@@ -334,14 +403,16 @@
                                         po_load_playlists();
                                 });
                         }
+
+                        // start the location process ! 
+                        getLocation();
                 });
 
                 ////////////////////////
 
                 // Init deezer sdk
                 initDeezer();
-                // start the location process ! 
-                getLocation();
+
 
         </script>
 
