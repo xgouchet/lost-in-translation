@@ -3,7 +3,7 @@
 <head>
 
         <title>Lost in Translation</title>
-        <link rel="stylesheet" href="default.css" />
+        <link rel="stylesheet" href="default.css?v=<?php echo rand(); ?>" />
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
         <meta charset="UTF-8">
 
@@ -20,26 +20,46 @@
         <div id="dz-root"></div>
 
 
-        <!-- Title -->
-        <h1>Keep calm and listen to...</h1>
-        <h2 id="location"></h2>
 
         <!-- The content -->
         <div id="lit-content">
+
+                <!-- Background image credit -->
+                <div id="lit-background-credits" style="display:none">
+                        <p>
+                                <span>Powered by Panoramio <img src="panoramio.png" width="24" height="24"/></span>
+                        </p>
+                        <p>
+                                <span id="lit-background-title"></span> by <span id="lit-background-author"></span> - <span id="lit-background-date"></span>
+                        </p>
+                </div>
+
+
+                <!-- Title -->
+                <h1>Keep calm and welcome to... <span id="location"></span></h1>
 
                 <!-- The selected playlist sort form -->
                 <div id="lit-section-locations" style="display:none">
                         <h3 id="lit-select-locations-title"></h3>
 
-                        <form>
-                                <select id="lit-select-locations"></select><br/><br/>
+                        <form action="javascript:selectLocation();">
+                                <select id="lit-select-locations"></select> 
+                                <input type="text" name="lit-custom-location"  id="lit-custom-location" placeholder="Type your location, eg : San Francisco, CA, US" size="48">
                                 <a onclick="selectLocation()">OK</a>
                         </form>
                 </div>
+                
+                <div>
+                        <!-- The deezer Player -->
+                        <div id="lit-player" style="display:none">
+                        </div>
 
-                <!-- The deezer Player -->
-                <div id="lit-player">
+                        <div id="lit-information" style="display:none">
+                                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+                        </div>
                 </div>
+
+                <div style="clear : both"></div>
         </div>
 
 
@@ -76,14 +96,18 @@
 
                 //////////////////////////////////////////////////////////////////////////////////////////
 
+                var currentLocationCoordinates = null; 
+
                 /*
                  * Geo Location (pretty standard stuff)
                  */
                 function getLocation() {
                         if (navigator.geolocation) {
+                                currentLocationCoordinates = null;
                                 navigator.geolocation.getCurrentPosition(function (position) {
                                         debug("Latitude: " + position.coords.latitude + "<br>Longitude: " + position.coords.longitude);
-                                         convertCoordsToLocation(position.coords.longitude, position.coords.latitude, null);
+                                        currentLocationCoordinates = position.coords; 
+                                         convertCoordsToLocation(position.coords.longitude, position.coords.latitude);
                                  }, 
                                  function(status) {
                                         displayFakeLocations("Unable to get current location. Nevermind, you can try one of these locations...");
@@ -102,7 +126,7 @@
                  * Feat. Google Geocoding API
                  * API key : AIzaSyDGsKmD3P0sddPROHKgUkG0VikKJiBNaV0
                  */
-                function convertCoordsToLocation(longitude, latitude, callback) {
+                function convertCoordsToLocation(longitude, latitude) {
                         var requestUrl = "https://maps.googleapis.com/maps/api/geocode/json"
                                                         + "?" + "latlng=" + latitude + ","  + longitude 
                                                         + "&" + "result_type=locality" 
@@ -136,12 +160,50 @@
                         httpRequest.send();
                 }
 
+                 /*
+                 * Geocoding  = convert place name to long/lat
+                 * Feat. Google Geocoding API
+                 * API key : AIzaSyDGsKmD3P0sddPROHKgUkG0VikKJiBNaV0
+                 */
+                function convertLocationToCoords(userLocation) {
+                        var requestUrl = "https://maps.googleapis.com/maps/api/geocode/json"
+                                                        + "?" + "address=" + encodeURIComponent(userLocation)
+                                                        + "&" + "result_type=locality" 
+                                                        + "&" + "key=" + "AIzaSyDGsKmD3P0sddPROHKgUkG0VikKJiBNaV0"; 
+                        debug(requestUrl);
+
+                        var httpRequest = new XMLHttpRequest();
+                        httpRequest.open("GET", requestUrl, true);
+                        httpRequest.onload = function (e) {
+                                if (httpRequest.readyState === 4) {
+                                        if (httpRequest.status === 200) {
+
+                                                var responseJSON = JSON.parse(httpRequest.responseText); 
+                                                debug("Found LOCATION");
+                                                debug(responseJSON);
+                                                if (responseJSON.results.length == 0) {
+                                                       // ignore
+                                                } else {
+                                                        currentLocationCoordinates = {
+                                                                latitude : responseJSON.results[0].geometry.location.lat,
+                                                                longitude : responseJSON.results[0].geometry.location.lng
+                                                        };
+                                                        changeBackground();
+                                                }
+                                        } else {
+                                                error(httpRequest.statusText);
+                                        }
+                                }
+                        }
+                        httpRequest.send();
+                }
+
                 /*
                  * Display a bunch of fake locations when we can't detect the user's location
                  */
                 function displayFakeLocations(message){
                         var fakeLocations = [
-                                "La Loupe, France",
+                                "Clermont-Ferrand, France",
                                 "Chartres, France",
                                 "Nogent le Rotrou, France",
                                 "Orléans, France",
@@ -149,6 +211,7 @@
                                 "Southampton, England, GB",
                                 "San Diego, CA, US"
                         ];
+                        currentLocationCoordinates = null; 
                         displayLocations(fakeLocations, message);
                 }
 
@@ -164,6 +227,12 @@
 
                         // clear previous options
                         clearContents(locationsCombo);
+
+                        var option = document.createElement("OPTION");
+                        option.setAttribute("value", "");
+                        option.innerHTML = " -- Select location";
+
+                        locationsCombo.appendChild(option);
 
                         // add one option for each  location
                         locations.forEach(function (location) {
@@ -184,8 +253,18 @@
                 function selectLocation() {
                         var  locationsCombo = document.getElementById("lit-select-locations");
                         var  selectedLocation = locationsCombo.options[locationsCombo.selectedIndex].value;
-                        displayLocation(selectedLocation);
-                        document.getElementById("lit-section-locations").setAttribute("style", "display:none;");
+                        
+
+                        var customLocation = document.getElementById("lit-custom-location").value;
+
+                        if ((customLocation != null) && (customLocation.length > 0)) {
+                                displayLocation(customLocation);        
+                                document.getElementById("lit-section-locations").setAttribute("style", "display:none;");
+                        } else if ((selectedLocation != null) && (selectedLocation.length > 0)){
+                                displayLocation(selectedLocation);        
+                                document.getElementById("lit-section-locations").setAttribute("style", "display:none;");
+                        }
+                        
                 }
 
                 /*
@@ -194,7 +273,77 @@
                 function displayLocation(userLocation) {
                         debug("displayLocation("+userLocation+")");
                         document.getElementById("location").innerHTML = userLocation;
+
+                        if (currentLocationCoordinates === null) {
+                                // TODO Google Map API to get coords from location 
+                                convertLocationToCoords(userLocation);
+                        } else {
+                                changeBackground(userLocation);
+                        }
                         searchArtists(userLocation);
+                }
+
+                //////////////////////////////////////////////////////////////////////////////////////////
+
+                /* 
+                 * Changes the page background 
+                 * Feat. Panoramio API
+                 */
+                function changeBackground(userLocation) {
+                        var requestUrl = "http://www.panoramio.com/map/get_panoramas.php"
+                                                        + "?" + "set=" + "public"
+                                                        + "&" + "size=" + "original"
+                                                        + "&"  + "minx=" + (currentLocationCoordinates.longitude - 0.001)
+                                                        + "&"  + "maxx=" + (currentLocationCoordinates.longitude + 0.001)
+                                                        + "&"  + "miny=" + (currentLocationCoordinates.latitude - 0.001)
+                                                        + "&"  + "maxy=" + (currentLocationCoordinates.latitude + 0.001)
+                                                        + "&" + "from=0" 
+                                                        + "&" + "to=20" 
+                                                        + "&" + "callback=" + "onBackgroundAvailable";
+                         debug(requestUrl);
+
+                       // Instead of an XMLHttpRequest, we need to use a hack to work with jsonp
+                       var scriptElement = document.createElement('script');
+                       scriptElement.src = requestUrl; 
+                       document.getElementsByTagName('head')[0].appendChild(scriptElement);
+                }
+
+                function onBackgroundAvailable(data){
+                        if (data.count == 0) {
+                                // no background, TODO find an alternative ?
+                                return; 
+                        }
+                        debug(data);
+                        var index = Math.floor(Math.random() * data.photos.length);
+                        var photo = data.photos[index];
+
+                        var parentElement; 
+
+                        // photo title
+                        parentElement = document.getElementById("lit-background-title");
+                        var photoLinkElement = document.createElement('A');
+                        photoLinkElement.href = photo.photo_url;
+                        photoLinkElement.innerHTML = photo.photo_title;
+                        clearContents(parentElement);
+                        parentElement.appendChild(photoLinkElement);
+
+                        // photo author
+                        parentElement = document.getElementById("lit-background-author");
+                        var authorLinkElement = document.createElement('A');
+                        authorLinkElement.href = photo.owner_url;
+                        authorLinkElement.innerHTML = photo.owner_name;
+                        clearContents(parentElement);
+                        parentElement.appendChild(authorLinkElement);
+
+                        // photo upload date
+                       document.getElementById("lit-background-date").innerHTML = photo.upload_date; 
+
+                       // set the page background
+                       document.getElementsByTagName('html')[0].setAttribute("style", 'background : url("' + photo.photo_file_url + '") no-repeat center center fixed; background-size: cover;');
+
+
+                        // make sure the locations div is not hidden
+                        document.getElementById("lit-background-credits").removeAttribute("style");
                 }
 
 
@@ -208,34 +357,38 @@
                  function searchArtists(userLocation) {
                         debug("searchArtists("+userLocation+")");
 
+                        // sanytize userLocation (- is interpreted as keyword by echonest... damn )
+                        userLocation = encodeURIComponent(userLocation).replace("-", " ");
+
                         var requestUrl = "http://developer.echonest.com/api/v4/artist/search" 
                                                         + "?" +  "api_key=" + "EDCIVASYSJCBWGTMN"
-                                                        + "&" + "format=json"
+                                                        + "&" + "format=jsonp"
                                                         + "&" +  "artist_location=" + userLocation
                                                         + "&" + "bucket=" + "id:deezer"
                                                         + "&" + "sort=" + "hotttnesss-desc"
                                                         + "&" + "bucket=" + "genre"
                                                         + "&" + "bucket=" + "artist_location"
-                                                        + "&" + "bucket=" + "years_active";
+                                                        + "&" + "bucket=" + "biographies"
+                                                        + "&" + "bucket=" + "years_active"
+                                                        + "&" + "callback=" + "onArtistRetrieved"; 
                         debug(requestUrl);
 
-                        var httpRequest = new XMLHttpRequest();
-                        httpRequest.open("GET", requestUrl, true);
-                        httpRequest.onload = function (e) {
-                                if (httpRequest.readyState === 4) {
-                                        if (httpRequest.status === 200) {
-                                                var responseJSON = JSON.parse(httpRequest.responseText); 
-                                                if (responseJSON.response.status.code ===0) {
-                                                        extractArtists(responseJSON.response.artists); 
-                                                } else {
-                                                        error (responseJSON.response.status.message);
-                                                }
-                                        } else {
-                                                error(httpRequest.statusText);
-                                        }
-                                }
+                        // Instead of an XMLHttpRequest, we need to use a hack to work with jsonp
+                       var scriptElement = document.createElement('script');
+                       scriptElement.src = requestUrl; 
+                       document.getElementsByTagName('head')[0].appendChild(scriptElement);
+                       
+                 }
+
+                 /*
+                  * Callback method for the Echonest request
+                  */
+                 function onArtistRetrieved(data) {
+                        if (data.response.status.code ===0) {
+                                extractArtists(data.response.artists); 
+                        } else {
+                                error (data.response.status.message);
                         }
-                        httpRequest.send();
                  }
 
                 /*
@@ -337,6 +490,7 @@
                         if (artistsToFetch.length == 0){
                                 shuffleTrackList();
                                 DZ.player.playTracks(currentLocationTracks);
+                                document.getElementById('lit-player').removeAttribute("style");
                                 return; 
                         }
 
@@ -376,8 +530,9 @@
                                 channelUrl: 'http://www.xgouchet.fr/LostInTranslation/channel.php',
                                 player: { 
                                         container: 'lit-player',
-                                        width : 800,
-                                        height : 300,
+                                        width : 600,
+                                        height : 600,
+                                        format : 'horizontal',
                                         onload : function(){}
                                 }
                         });
