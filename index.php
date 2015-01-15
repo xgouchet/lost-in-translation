@@ -4,6 +4,8 @@
 
         <title>Lost in Translation</title>
         <link rel="stylesheet" href="default.css" />
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+        <meta charset="UTF-8">
 
         <!-- TODO metadata, SEO, ... -->
 
@@ -27,7 +29,7 @@
 
                 <!-- The selected playlist sort form -->
                 <div id="lit-section-locations" style="display:none">
-                        <h3>We can't decide where you are, please help us !</h3>
+                        <h3 id="lit-select-locations-title"></h3>
 
                         <form>
                                 <select id="lit-select-locations"></select><br/><br/>
@@ -66,12 +68,24 @@
                         }
                 };
 
-                //  Geo Location
-                function getLocation(callback) {
+
+                //////////////////////////////////////////////////////////////////////////////////////////
+
+                /*
+                 * Geo Location (pretty standard stuff)
+                 */
+                function getLocation() {
                         if (navigator.geolocation) {
-                                navigator.geolocation.getCurrentPosition(callback);
+                                navigator.geolocation.getCurrentPosition(function (position) {
+                                        debug("Latitude: " + position.coords.latitude + "<br>Longitude: " + position.coords.longitude);
+                                         convertCoordsToLocation(position.coords.longitude, position.coords.latitude, null);
+                                 }, 
+                                 function(status) {
+                                        displayFakeLocations("Unable to get current location. Nevermind, you can try one of these locations...");
+                                 });
                                 return true;
                         } else {
+                                displayFakeLocations("You're browser can't tell me your current position. Nevermind you can try one of these...");
                                 return false;
                         }
 
@@ -107,7 +121,7 @@
                                                                         locations.push(result.formatted_address);
                                                                 }
                                                         });
-                                                        displayLocations(locations);
+                                                        displayLocations(locations, "We can't pinpoint your location. Can you help us ?");
                                                 }
                                                 // debug(responseJSON);
                                         } else {
@@ -119,10 +133,25 @@
                 }
 
                 /*
+                 * Display a bunch of fake locations when we can't detect the user's location
+                 */
+                function displayFakeLocations(message){
+                        var fakeLocations = [
+                                "Orléans, France",
+                                "Groningen, Netherlands",
+                                "Southampton, England, GB",
+                                "San Diego, CA, US"
+                        ];
+                        displayLocations(fakeLocations, message);
+                }
+
+                /*
                  * Display a list of locations that the user can filter through
                  */
-                function displayLocations(locations){
+                function displayLocations(locations, message){
                         debug(locations);
+
+                        document.getElementById("lit-select-locations-title").innerHTML = message;
 
                         var locationsCombo = document.getElementById("lit-select-locations");
 
@@ -156,6 +185,9 @@
                         searchArtists(userLocation);
                 }
 
+
+                //////////////////////////////////////////////////////////////////////////////////////////
+
                 /*
                  * request a search for artists based on the location
                  * Feat. Echonest
@@ -171,8 +203,7 @@
                                                         + "&" + "bucket=" + "id:deezer"
                                                         + "&" + "sort=" + "hotttnesss-desc"
                                                         + "&" + "bucket=" + "genre"
-                                                        + "&" + "bucket=" + "familiarity"
-                                                        + "&" + "bucket=" + "hotttnesss"
+                                                        + "&" + "bucket=" + "artist_location"
                                                         + "&" + "bucket=" + "years_active";
                         debug(requestUrl);
 
@@ -182,8 +213,11 @@
                                 if (httpRequest.readyState === 4) {
                                         if (httpRequest.status === 200) {
                                                 var responseJSON = JSON.parse(httpRequest.responseText); 
-                                                
-                                                debug(responseJSON);
+                                                if (responseJSON.response.status.code ===0) {
+                                                        extractArtists(responseJSON.response.artists); 
+                                                } else {
+                                                        error (responseJSON.response.status.message);
+                                                }
                                         } else {
                                                 error(httpRequest.statusText);
                                         }
@@ -192,12 +226,122 @@
                         httpRequest.send();
                  }
 
+                /*
+                * Global array of artists 
+                */
+                var currentLocationArtists = new Array();
+                var currentLocationTracks = new Array();
+
+                /*
+                * Extract the artist from Echonest's response
+                */
+                function extractArtists(echonestArtists){
+                        debug(echonestArtists);
+                        echonestArtists.forEach(function (echonestArtist) {
+                                var artist = {}; 
+                                artist.deezerId = extractDeezerId(echonestArtist); 
+                                artist.genres = extractGenres(echonestArtist);
+                                artist.name = echonestArtist.name; 
+                                debug(artist);
+
+                                if (artist.deezerId === null) {
+                                        debug ("Ignoring " + artist.name + " since we don't have any Deezer ID for him");
+                                } else {
+                                        currentLocationArtists.push(artist);
+                                }                                
+                        });
+
+                }
+
+                /*
+                * Extract the Deezer ID from an artist's echonest object
+                */
+                function extractDeezerId(echonestArtist){
+                        if (echonestArtist.foreign_ids.length == 0){
+                                return null; 
+                        }
+
+                        var deezerId = null; 
+                        echonestArtist.foreign_ids.forEach(function (foreign_id) {
+                                if (foreign_id.catalog == "deezer") {
+                                        deezerId = foreign_id.foreign_id;
+                                }
+                        });
+
+                        if (deezerId === null) {
+                                return null; 
+                        }
+
+                        // id is now in the form "deezer:artist:12345"
+                        debug(deezerId);
+                        return deezerId.substring(14);
+                }
+
+                /*
+                * Extract the Genres from an artist's echonest object
+                */
+                function extractGenres(echonestArtist){
+                        var genres = new Array();
+                        echonestArtist.genres.forEach(function (echonestGenre) {
+                                genres.push(echonestGenre.name);
+                        });
+                        return genres; 
+                }
+
+                /*
+                * Creates the track list based on the artists list
+                */
+                function createTrackList() {
+                        currentLocationArtists.forEach(function (artist) {
+
+                        } );
+                }
+
+                
+
+
+                //////////////////////////////////////////////////////////////////////////////////////////
+
+                /*
+                 * Initialises the Deezer SDK
+                 */
+                function initDeezer() {
+                        DZ.init({
+                                appId: '150511',
+                                channelUrl: 'http://www.xgouchet.fr/LostInTranslation/channel.php',
+                                player: { 
+                                        onload : function(){}
+                                }
+                        });
+                };
+                        
+
+                /*
+                 * Set the ready callback
+                 */
+                DZ.ready(function(sdk_options){
+
+                        debug('DZ SDK is ready', sdk_options);
+                        userToken = sdk_options.token.accessToken;
+
+                        if (userToken == null){
+                                // ??? 
+                        } else {
+                                DZ.api('/user/me', function(response) {
+                                        console.log('Good to see you, ' + response.name + '.');
+                                        userId = response.id; 
+
+                                        po_load_playlists();
+                                });
+                        }
+                });
+
                 ////////////////////////
 
-                getLocation(function (position) {
-                        debug("Latitude: " + position.coords.latitude + "<br>Longitude: " + position.coords.longitude);
-                        convertCoordsToLocation(position.coords.longitude, position.coords.latitude, null);
-                });
+                // Init deezer sdk
+                initDeezer();
+                // start the location process ! 
+                getLocation();
 
         </script>
 
