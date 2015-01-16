@@ -3,9 +3,10 @@
 body {
     font-family: sans-serif;
     margin:0;
-    padding-left: 40px;
+    padding : 0;
     height: 100%;
     font-family: Century Gothic, sans-serif;
+    background-color: #3498db;
 }
 
 h1, h2, h3, h4 {
@@ -28,6 +29,22 @@ h1{
     color:#e74c3c;
 }
 
+#lit-background {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    width : 100%;
+    height: 100%;
+    display: block;
+    -webkit-filter: blur(15px);
+    -moz-filter: blur(15px);
+    -o-filter: blur(15px);
+    -ms-filter: blur(15px);
+    filter: blur(15px);
+    opacity: 0.8;
+}
+
 #lit-content {
     margin:16px;
     padding: 8px;
@@ -36,29 +53,72 @@ h1{
     background-color: rgba(255,255,255,0.5);
 }
 
+#lit-content a{
+    color : #34495e;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+#lit-api-credits {
+    float : left;
+    width : 40%;
+    text-align : left;
+}
 
 #lit-background-credits {
-    padding : 8px;
-    position: fixed;
-    bottom: 0;
-    width : 80%;
-    color: #bdc3c7;
+    float : right;
+    width : 40%;
     text-align : right;
+}
+
+.credit {
+    margin:16px; 
+    padding : 8px;
+    color: #bdc3c7;
     border-radius: 16px;
     background-color: rgba(0,0,0,0.35);
 }
 
-#lit-background-credits a{
+.credit a{
     color: #bdc3c7;
     text-decoration : none;   
     font-weight: bold;
 }
 
-#lit-biography-content {
+a:hover {
+    text-decoration : underline;   
+}
+
+#lit-biography-content, #lit-information-content {
     height : 450px;
     overflow: auto;
 }
 
 td {
-    width : 33%;
+    width : 30%;
+    padding : 8px;
+    vertical-align: top;
+}
+
+.biography-source, .information-source {
+    font-style: italic;
+}
+
+/* HIDE SOME WIKIPEDIA ELEMENTS */
+.hatnote, .infobox, .IPA, .references {
+    display : none; 
+}
+
+#lit-custom-location { 
+    width : 320px;
+    float:right;
+}
+
+#lit-player {
+        height : 450px;
+}
+
+form a{
+    padding-right : 16px;
+    cursor: pointer; 
 }
