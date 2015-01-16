@@ -88,7 +88,7 @@
                 </div>
                 <div id="lit-api-credits" class="credit">
                     <p>
-                        App powered by <a href="http://www.deezer.com/">Deezer</a>, <a href="http://echonest.com/">Echonest</a> and <a href="https://developers.google.com/maps/documentation/geocoding/">Google Maps</a>
+                        App powered by <a href="http://www.deezer.com/">Deezer</a>, <a href="http://echonest.com/">Echonest</a>, <a href="https://developers.google.com/maps/documentation/geocoding/">Google Maps</a> and <a href="http://www.mediawiki.org/wiki/API:Main_page">Wikipedia</a>
                     </p>
                     <p>
                         Fork me on <a href="https://github.com/xgouchet/lost-in-translation">Github</a> !
