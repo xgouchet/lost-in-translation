@@ -19,7 +19,7 @@
         <!-- Div needed by Deezer -->
         <div id="dz-root"></div>
 
-        <div id="lit-background">
+        <div id="lit-background" style=" background: linear-gradient(to bottom right, #FFFFFF, #888888); ">
         </div>
 
         <!-- The content -->
@@ -61,7 +61,6 @@
                         </td>
                         <td>
                             <h2 id="lit-save-playlist" style="display:none">
-                                <a onclick="onSaveCurrentTrackList()">Save in my playlists</a>
                             </h2>
                             <!-- The deezer Player -->
                             <div id="lit-player" style="display:none">
@@ -110,7 +109,7 @@
         // Debug method
         function debug(message) {
             console.log(message);
-            document.getElementById("debug").innerHTML = message;
+            //document.getElementById("debug").innerHTML = message;
         }
 
         function error(message) {
@@ -417,6 +416,7 @@
             } else {
                 currentLocationArtists = retrievedArtists;
                 artistsToFetch = retrievedArtistsIds; 
+                currentLocationTracks = new Array();
                 findNextTracks();
             }
 
@@ -470,14 +470,7 @@
 
         var currentLocationTracks = new Array();
 
-        /*
-        * Clear any previous tracklist
-        */
-        function clearTrackList() {
-            while (currentLocationTracks.length > 0) {
-                currentLocationTracks.pop();
-            }
-        }
+  
 
         /*
         * Shuffles the tracklist 
@@ -501,7 +494,16 @@
                 document.getElementById('lit-player').removeAttribute("style");
 
                 
-                document.getElementById('lit-save-playlist').removeAttribute("style");
+                var saveLinkElement = document.createElement('A');
+                saveLinkElement.setAttribute("onclick", "onSaveCurrentTrackList()");
+                saveLinkElement.innerHTML = "Add to my Deezer playlists"; 
+
+                var saveElement = document.getElementById("lit-save-playlist");
+                clearContents(saveElement);
+                saveElement.appendChild(saveLinkElement);
+
+                // make sure it's visible
+                saveElement.removeAttribute("style");
                 
                 return; 
             }
@@ -631,6 +633,9 @@
             document.getElementsByTagName('head')[0].appendChild(scriptElement);
         }
 
+        /*
+        * Display the wikipedia info about the current location
+        */
         function onLocationInfoRetrieved(data) {
             debug("onLocationInfoRetrieved");
             debug(data);
@@ -740,13 +745,30 @@
                 DZ.api('user/me/playlists', 'POST', {title : currentLocationName}, 
                     function(response){
                         debug ("Playlist created");
-                        debug(response);
+                        if (!response.id){
+                            error ("Error creating playlist " + response);
+                            return; 
+                        }
+
+                        var createdPlaylistId = response.id; 
 
                         DZ.api('playlist/' + response.id + '/tracks', 'POST', {songs : currentLocationTracks}, 
                             function(response){
-                                debug ("Playlist updated");
-                                debug(response);
-                                
+                                if (!response){
+                                    error("Error adding tracks to playlist");
+                                    return; 
+                                }
+
+                                 var playlistLinkElement = document.createElement('A');
+                                playlistLinkElement.href = "http://www.deezer.com/playlist/" + createdPlaylistId;
+                                playlistLinkElement.innerHTML = "Playlist saved ! ";
+
+                                var saveElement = document.getElementById("lit-save-playlist");
+                                clearContents(saveElement);
+                                saveElement.appendChild(playlistLinkElement);
+
+                                // make sure it's visible
+                                saveElement.removeAttribute("style");
                             });
                     });
             }
